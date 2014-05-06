@@ -1,0 +1,60 @@
+import socket
+import cv2
+import numpy as np
+
+IP=raw_input('Please input the server\'s IP:\n')
+PORT=int(raw_input('Please input the port number:\n'))
+
+#IP = '10.148.110.133'
+#PORT = 1236
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((IP, PORT))
+cv2.namedWindow('w1')
+
+while True:
+        header = s.recv(64)
+        print header
+        print len(header)
+
+        paramlist = header.split(',')
+        cols = int(paramlist[0])
+        type = int(paramlist[1])
+        length = int(paramlist[2])
+
+        #print 'length in header', length
+
+        mat = cv2.cv.CreateMat(1,cols,type)
+        s.sendall('ready to receive data')
+
+        recvcycle = (length/4096) + 10
+        remainder = length%4096
+        #print 'recvcycle is', recvcycle
+        #print 'remainder is', remainder
+
+        data=''
+        index=1
+        while(index):
+            data=data+s.recv(4096)
+            index=length-len(data)
+            #print 'data step length', len(data)
+
+        #print 'data total length', len(data)
+        #print 'recvcycle is', recvcycle
+        s.sendall('data received')
+        #discard the incomplete frame
+        if len(data)!= length:
+            continue
+        #datalist = data.split(',')
+
+        #print datalist[:50]
+        for m in range(cols):
+            mat[0,m] = float(int('0x'+(data[:2]),16))
+            data = data[2:]
+        c = cv2.cv.DecodeImage(mat, 1)
+        d = np.asarray(c[:,:])
+
+        cv2.imshow('w1', d)
+        cv2.waitKey(30)
+       
+cv2.destroyAllWindows()
